@@ -1,2 +1,2 @@
-# OpenCV-
-mouth opened or closed
+# OpenCV_detection_mouth
+mouth is opened or closed
