@@ -1,0 +1,74 @@
+import cv2
+import mediapipe as mp
+import numpy as np
+import struct
+import socket
+import time
+server_socket=socket()
+mp_face_mesh = mp.solutions.face_mesh
+face_mesh = mp_face_mesh.FaceMesh(max_num_faces=1,min_detection_confidence=0.5, min_tracking_confidence=0.5)
+Mouth_THRESHOLD = 0.004
+def calculate_lips_dist(landmarks):
+    # Indices for upper and lower lips
+    upper_lip_indices = [13, 14, 15, 16, 17]
+    lower_lip_indices = [84, 85, 86, 87, 88]
+    
+
+
+    # Calculate the average height of upper and lower lips
+    upper_lip_height = np.mean([landmarks[i].y for i in upper_lip_indices])
+    lower_lip_height = np.mean([landmarks[i].y for i in lower_lip_indices])
+    # print(*upper_lip_height)
+
+    # Calculate the vertical distance between upper and lower lips
+    lip_distance = lower_lip_height - upper_lip_height
+    
+    return lip_distance
+
+
+
+
+def main():
+    cap = cv2.VideoCapture(0)
+    while cap.isOpened():
+        ret, frame = cap.read()   
+        if not ret:
+            break
+        # Convert the BGR image to RGB
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        # Process the image to find face landmarks
+        result = face_mesh.process(rgb_frame)
+
+        if result.multi_face_landmarks:
+            for face_landmarks in result.multi_face_landmarks:
+                # Draw the face landmarks on the frame
+                for landmark in face_landmarks.landmark:
+                    # print(landmark)
+                    x = int(landmark.x * frame.shape[1])
+                    y = int(landmark.y * frame.shape[0])
+                    # z = int(landmark.z * frame.shape[0])
+                    
+                    cv2.circle(frame, (x, y), 1, (0, 255, 0), -1)
+                    # print("x",x)
+                    # print("y",y)
+
+                # Calculate the yawn ratio
+                lips_dist = calculate_lips_dist(face_landmarks.landmark)
+                
+                # Check if the yawn ratio exceeds the threshold
+                if lips_dist > Mouth_THRESHOLD:
+                    cv2.putText(frame, "Opened", (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                else:
+                    cv2.putText(frame, "CLosed", (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                
+
+        cv2.imshow('Frame', frame)
+        if cv2.waitKey(2) & 0xFF == ord('q'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    main()
